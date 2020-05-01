@@ -18,7 +18,7 @@ This enables the definition of a wide variety of power network formulations and 
 **Core Problem Specifications**
 * Power Flow (pf)
 * Optimal Power Flow (opf)
-* Optimal Transmission Switching (ots)
+* Optimal Transmission Switching (ots )
 * Transmission Network Expansion Planning (tnep)
 
 **Core Network Formulations**
