@@ -2,7 +2,29 @@ PowerModels.jl Change Log
 =========================
 
 ### Staged
-- nothing
+- Fixed bug in dual reporting in `constraint_power_balance_ls` (#741)
+
+### v0.17.3
+- Added a to file variant of `export_matpower`
+- Improved `correct_bus_types!` support for undefined bus type values
+- Improved PSSE parser robustness to invalid `CZ`, `CW` and `CM` parameters in transformers
+
+### v0.17.2
+- Added support for ACR formulation with storage
+- Added support for LPAC formulations of OTS and TNEP problems (#708) (thanks to @jay-dave)
+- Added `windv*`, `nomv*` and `cw` values to `import_all` on PSS/E data files (#629)
+- Strengthened checks for multi-network and multi-conductor in `run_model`
+- Fixed conversions for transformer tap values in PSSE parser (#629)
+- Fixed keyword arguments in native AC Power Flow solver
+- Fixed star bus `bus_type` values in three winding transformers
+- Fixed Matpower parser bug when reactive power cost data was present (#729)
+
+### v0.17.1
+- Improved robustness of `export_matpower` to extra model data (#707)
+- Improved the PWL cost data processing during model building (#709)
+- Fixed bugs admittance matrix tools to support inactive buses
+- Fixed PSSE support for multiple three-winding transformers at the same buses (#712)
+- Fixed PSSE transformer status processing (#712)
 
 ### v0.17.0
 - Updated to new function name convention, details in issue #701 (#555,#656) (breaking)
@@ -14,7 +36,7 @@ PowerModels.jl Change Log
 - Added a native AC Power Flow solver in polar coordinates that uses NLSolve (#590)
 - Added `ismulticonductor` check on data models
 - Made branch power flow expressions formulation agnostic (#684) (breaking)
-- Changed the PWL cost implementation from a max formulation to a relaxaed sos formulation
+- Changed the PWL cost implementation from a max formulation to a relaxed sos formulation
 - Updated PWL cost data processing to require points that span a generators complete operating range (breaking)
 - Updated `correct_bus_types!` to correct slack buses and focus on preparation for power flow studies (breaking)
 - Updated ref extensions API to use ref and data dictionaries, not power model types (#668) (breaking)

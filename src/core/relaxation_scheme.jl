@@ -142,4 +142,3 @@ function relaxation_cos_on_off(m, x, y, z, M_x)
     JuMP.@constraint(m, y <= z - (1-cos(max_ad))/(max_ad^2)*(x^2) + (1-z)*((1-cos(max_ad))/(max_ad^2)*(M_x^2)))
 end
 
-

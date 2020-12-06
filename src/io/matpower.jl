@@ -375,7 +375,7 @@ function _matpower_to_powermodels!(mp_data::Dict{String,<:Any})
 
     # merge data tables
     _merge_bus_name_data!(pm_data)
-    _merge_generator_cost_data!(pm_data)
+    _merge_cost_data!(pm_data)
     _merge_generic_data!(pm_data)
 
     # split loads and shunts from buses
@@ -561,29 +561,50 @@ end
 
 
 "merges generator cost functions into generator data, if costs exist"
-function _merge_generator_cost_data!(data::Dict{String,Any})
+function _merge_cost_data!(data::Dict{String,Any})
     if haskey(data, "gencost")
-        for (i, gencost) in enumerate(data["gencost"])
-            gen = data["gen"][i]
-            @assert(gen["index"] == gencost["index"])
-            delete!(gencost, "index")
-            delete!(gencost, "source_id")
+        gen = data["gen"]
+        gencost = data["gencost"]
 
-            _check_keys(gen, keys(gencost))
-            merge!(gen, gencost)
+        if length(gen) != length(gencost)
+            if length(gencost) > length(gen)
+                Memento.warn(_LOGGER, "The last $(length(gencost) - length(gen)) generator cost records will be ignored due to too few generator records.")
+                gencost = gencost[1:length(gen)]
+            else
+                Memento.warn(_LOGGER, "The number of generators ($(length(gen))) does not match the number of generator cost records ($(length(gencost))).")
+            end
         end
+
+        for (i, gc) in enumerate(gencost)
+            g = gen[i]
+            @assert(g["index"] == gc["index"])
+            delete!(gc, "index")
+            delete!(gc, "source_id")
+
+            _check_keys(g, keys(gc))
+            merge!(g, gc)
+        end
+
         delete!(data, "gencost")
     end
 
-    if haskey(data, "dclinecost")
-        for (i, dclinecost) in enumerate(data["dclinecost"])
-            dcline = data["dcline"][i]
-            @assert(dcline["index"] == dclinecost["index"])
-            delete!(dclinecost, "index")
-            delete!(dclinecost, "source_id")
 
-            _check_keys(dcline, keys(dclinecost))
-            merge!(dcline, dclinecost)
+    if haskey(data, "dclinecost")
+        dcline = data["dcline"]
+        dclinecost = data["dclinecost"]
+
+        if length(dcline) != length(dclinecost)
+            Memento.warn(_LOGGER, "The number of dclines ($(length(dcline))) does not match the number of dcline cost records ($(length(dclinecost))).")
+        end
+
+        for (i, dclc) in enumerate(dclinecost)
+            dcl = dcline[i]
+            @assert(dcl["index"] == dclc["index"])
+            delete!(dclc, "index")
+            delete!(dclc, "source_id")
+
+            _check_keys(dcl, keys(dclc))
+            merge!(dcl, dclc)
         end
         delete!(data, "dclinecost")
     end
@@ -676,9 +697,20 @@ function _check_keys(data, keys)
 end
 
 
+"Export power network data to a file in the matpower format"
+function export_matpower(file::AbstractString, data::Dict{String,Any})
+    open(file, "w") do io
+        export_matpower(io, data)
+    end
+end
+
 
 "Export power network data in the matpower format"
 function export_matpower(io::IO, data::Dict{String,Any})
+    if _IM.ismultinetwork(data)
+        Memento.error(_LOGGER, "export_matpower does not yet support multinetwork data")
+    end
+
     data = deepcopy(data)
 
     #convert data to mixed unit
@@ -727,18 +759,18 @@ function export_matpower(io::IO, data::Dict{String,Any})
     bs = Dict{Int, Float64}()
 
     # collect all the loads
-    for (idx,bus) in sort(data["bus"])
+    for (idx,bus) in data["bus"]
         pd[bus["index"]] = 0
         qd[bus["index"]] = 0
     end
-    for (idx,load) in sort(data["load"])
+    for (idx,load) in data["load"]
         bus = buses[load["load_bus"]]
-        pd[bus["index"]] = pd[bus["index"]] + load["pd"]
-        qd[bus["index"]] = qd[bus["index"]] + load["qd"]
+        pd[bus["index"]] += load["pd"]
+        qd[bus["index"]] += load["qd"]
     end
 
     # collect all the shunts
-    for (idx,bus) in sort(data["bus"])
+    for (idx,bus) in data["bus"]
         gs[bus["index"]] = 0
         bs[bus["index"]] = 0
     end
@@ -763,7 +795,7 @@ function export_matpower(io::IO, data::Dict{String,Any})
     println(io, "%% bus data")
     println(io, "%    bus_i    type    Pd    Qd    Gs    Bs    area    Vm    Va    baseKV    zone    Vmax    Vmin")
     println(io, "mpc.bus = [")
-    for (idx,bus) in sort(buses)
+    for (idx,bus) in sort(collect(buses), by=(x) -> x.first)
         println(io,
             "\t", bus["index"],
             "\t", bus["bus_type"],
@@ -803,7 +835,7 @@ function export_matpower(io::IO, data::Dict{String,Any})
     println(io, "%    bus    Pg    Qg    Qmax    Qmin    Vg    mBase    status    Pmax    Pmin    Pc1    Pc2    Qc1min    Qc1max    Qc2min    Qc2max    ramp_agc    ramp_10    ramp_30    ramp_q    apf")
     println(io, "mpc.gen = [")
     i = 1
-    for (idx,gen) in sort(generators)
+    for (idx,gen) in sort(collect(generators), by=(x) -> x.first)
         if idx != gen["index"]
             Memento.warn(_LOGGER, "The index of the generator does not match the matpower assigned index. Any data that uses generator indexes for reference is corrupted.");
         end
@@ -846,7 +878,7 @@ function export_matpower(io::IO, data::Dict{String,Any})
         println(io, "%    storage_bus    ps    qs    energy    energy_rating    charge_rating    discharge_rating    charge_efficiency    discharge_efficiency    thermal_rating    qmin    qmax    r    x    p_loss    q_loss    status")
         println(io, "mpc.storage = [")
         i = 1
-        for (idx,strg) in sort(storage)
+        for (idx,strg) in sort(collect(storage), by=(x) -> x.first)
             if idx != strg["index"]
                 Memento.warn(_LOGGER, "The index of the storage does not match the matpower assigned index. Any data that uses storage indexes for reference is corrupted.");
             end
@@ -880,7 +912,7 @@ function export_matpower(io::IO, data::Dict{String,Any})
     println(io, "%    f_bus    t_bus    r    x    b    rateA    rateB    rateC    ratio    angle    status    angmin    angmax")
     println(io, "mpc.branch = [")
     i = 1
-    for (idx,branch) in sort(branches)
+    for (idx,branch) in sort(collect(branches), by=(x) -> x.first)
         if idx != branch["index"]
             Memento.warn(_LOGGER, "The index of the branch does not match the matpower assigned index. Any data that uses branch indexes for reference is corrupted.");
         end
@@ -918,7 +950,7 @@ function export_matpower(io::IO, data::Dict{String,Any})
         println(io, "%% dcline data")
         println(io, "%    f_bus    t_bus    status    Pf    Pt    Qf    Qt    Vf    Vt    Pmin    Pmax    QminF    QmaxF    QminT    QmaxT    loss0    loss1")
         println(io, "mpc.dcline = [")
-        for (idx, dcline) in sort(dclines)
+        for (idx, dcline) in sort(collect(dclines), by=(x) -> x.first)
             println(io,
                 "\t", _get_default(dcline, "f_bus"),
                 "\t", _get_default(dcline, "t_bus"),
@@ -955,7 +987,7 @@ function export_matpower(io::IO, data::Dict{String,Any})
         println(io, "%% switch data")
         println(io, "%  f_bus    t_bus    psw    qsw    state    thermal_rating    status")
         println(io, "mpc.switch = [")
-        for (idx, switch) in sort(switches)
+        for (idx, switch) in sort(collect(switches), by=(x) -> x.first)
             println(io,
                 "\t", _get_default(switch, "f_bus"),
                 "\t", _get_default(switch, "t_bus"),
@@ -983,7 +1015,7 @@ function export_matpower(io::IO, data::Dict{String,Any})
         println(io, "%column_names%    f_bus    t_bus    br_r    br_x    br_b    rate_a    rate_b    rate_c    tap    shift    br_status    angmin    angmax    construction_cost")
         println(io, "mpc.ne_branch = [")
         i = 1
-        for (idx,branch) in sort(ne_branches)
+        for (idx,branch) in sort(collect(ne_branches), by=(x) -> x.first)
             if idx != branch["index"]
                 Memento.warn(_LOGGER, "The index of the ne_branch does not match the matpower assigned index. Any data that uses branch indexes for reference is corrupted.");
             end
@@ -1013,7 +1045,7 @@ function export_matpower(io::IO, data::Dict{String,Any})
         # Print the bus name data
         println(io, "%% bus names")
         println(io, "mpc.bus_name = {")
-        for (idx,bus) in sort(buses)
+        for (idx,bus) in sort(collect(buses), by=(x) -> x.first)
             println(io,
                 "\t", "'", bus["name"], "'"
             )
@@ -1062,19 +1094,23 @@ end
 
 "Export fields of a component type"
 function _export_extra_data(io::IO, data::Dict{String,<:Any}, component, excluded_fields=Set(["index", "source_id"]); postfix="")
-    if isa(data[component], Int) || isa(data[component], Int64) || isa(data[component], Float64)
+    # check if numeric
+    if typeof(data[component]) <: Real
         println(io, "mpc.", component, " = ", data[component], ";")
         println(io)
         return
     end
 
-    if isa(data[component], String) || isa(data[component], SubString{String})
+    # check if string
+    if typeof(data[component]) <: AbstractString
         println(io, "mpc.", component, " = '", data[component], "';")
         println(io)
         return
     end
 
-    if !isa(data[component], Dict)
+    # proceed only if given a Dict
+    if !(typeof(data[component]) <: Dict{<:AbstractString,<:Any}
+            || typeof(data[component]) <: Dict{<:Real,<:Any})
         return
     end
 
@@ -1082,9 +1118,20 @@ function _export_extra_data(io::IO, data::Dict{String,<:Any}, component, exclude
         return
     end
 
+    # check if dict of dicts
+    for (key, value) in data[component]
+        if !isa(value, Dict)
+            Memento.warn(_LOGGER, "skipping export $(component), does not appear to be a component Dict")
+            return
+        end
+    end
+
+    #println("process $(component) as a dict of dicts")
+    comp_dict = data[component]
+
     # Gather the fields
     included_fields = []
-    c = collect(values(data[component]))[1]
+    c = collect(values(comp_dict))[1]
     for (key, value) in c
         if !in(key, excluded_fields)
             push!(included_fields, key)
@@ -1093,6 +1140,13 @@ function _export_extra_data(io::IO, data::Dict{String,<:Any}, component, exclude
 
     if length(included_fields) == 0
         return
+    end
+
+
+    if all(haskey(comp, "index") for (key,comp) in comp_dict)
+        key_order = sort(collect(keys(comp_dict)), by=x->comp_dict[x]["index"])
+    else
+        key_order = sort(collect(keys(comp_dict)))
     end
 
     # Print the header
@@ -1104,27 +1158,35 @@ function _export_extra_data(io::IO, data::Dict{String,<:Any}, component, exclude
     println(io)
     println(io, "mpc.", component, postfix, " = {")
 
-    # sort the data
-    components = Dict{Int, Dict}()
-    for (idx,c) in data[component]
-        components[c["index"]] = c
-    end
-
     # print the data
     i = 1
-    for (idx,c) in sort(components)
-        if idx != c["index"]
-            Memento.warn(_LOGGER, "The index of a component does not match the matpower assigned index. Any data that uses component indexes for reference is corrupted.");
+    for idx in key_order
+        c = comp_dict[idx]
+        if haskey(c, "index") && i != c["index"]
+            Memento.warn(_LOGGER, "The index of a component does not match the implicit matpower index. Any data that uses component indexes for reference is corrupted.")
         end
 
         for field in included_fields
             print(io,"\t")
-            if isa(c[field], Union{String,SubString})
-                print(io, "'")
-            end
-            print(io,c[field])
-            if isa(c[field], Union{String,SubString})
-                print(io, "'")
+            if haskey(c, field)
+                value = c[field]
+                if typeof(value) <: AbstractString
+                    print(io, "'$(value)'")
+                elseif typeof(value) <: Bool
+                    # exporting as float instead of Int is required to supprts NaN for missing values
+                    if value
+                        print(io, "1.0")
+                    else
+                        print(io, "0.0")
+                    end
+                elseif typeof(value) <: Real
+                    print(io, "$(value)")
+                else
+                    Memento.warn(_LOGGER, "unable to export $(typeof(value)) value for '$(field)' in component list $(component), not a string or numeric value")
+                    print(io, "NaN")
+                end
+            else
+                print(io, "NaN")
             end
         end
         println(io)
@@ -1158,16 +1220,16 @@ function _export_cost_data(io::IO, components::Dict{Int,Dict}, prefix::String)
         println(io, "%    2    startup    shutdown    n    c(n-1)    ...    c0")
         println(io, prefix, " = [")
 
-        for (idx,gen) in (sort(components))
-            if gen["model"] == 1
-                print(io, "\t1\t", gen["startup"], "\t", gen["shutdown"], "\t", (div(length(gen["cost"]),2))),
-                for l=1:length(gen["cost"])
-                    print(io, "\t", gen["cost"][l])
+        for (idx,comp) in sort(collect(components), by=(x) -> x.first)
+            if comp["model"] == 1
+                print(io, "\t1\t", comp["startup"], "\t", comp["shutdown"], "\t", (div(length(comp["cost"]),2))),
+                for l=1:length(comp["cost"])
+                    print(io, "\t", comp["cost"][l])
                 end
             else
-                print(io, "\t2\t", gen["startup"], "\t", gen["shutdown"], "\t", length(gen["cost"])),
-                for l=1:length(gen["cost"])
-                    print(io, "\t", gen["cost"][l])
+                print(io, "\t2\t", comp["startup"], "\t", comp["shutdown"], "\t", length(comp["cost"])),
+                for l=1:length(comp["cost"])
+                    print(io, "\t", comp["cost"][l])
                 end
             end
             println(io)
