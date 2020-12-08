@@ -328,49 +328,6 @@ end
         end
     end
 
-
-    @testset "test mld duals" begin
-        settings = Dict("output" => Dict("duals" => true))
-
-        @testset "ac case" begin
-            result = PowerModels._run_mld("../test/data/matpower/case5.m", ACPPowerModel, ipopt_solver, setting=settings)
-
-            @test result["termination_status"] == LOCALLY_SOLVED
-            @test isapprox(result["objective"], 10.0; atol = 1e-2)
-            for (i, bus) in result["solution"]["bus"]
-                @test bus["lam_kcl_r"] <=  1.0
-                @test bus["lam_kcl_r"] >= -1.0
-                @test bus["lam_kcl_i"] <=  1.0
-                @test bus["lam_kcl_i"] >= -1.0
-            end
-        end
-
-        @testset "soc case" begin
-            result = PowerModels._run_mld("../test/data/matpower/case5.m", SOCWRPowerModel, ipopt_solver, setting=settings)
-
-            @test result["termination_status"] == LOCALLY_SOLVED
-            @test isapprox(result["objective"], 10.0; atol = 1e-2)
-            for (i, bus) in result["solution"]["bus"]
-                @test bus["lam_kcl_r"] <=  1.0
-                @test bus["lam_kcl_r"] >= -1.0
-                @test bus["lam_kcl_i"] <=  1.0
-                @test bus["lam_kcl_i"] >= -1.0
-            end
-        end
-
-        @testset "dc case" begin
-            result = PowerModels._run_mld("../test/data/matpower/case5.m", SOCWRPowerModel, ipopt_solver, setting=settings)
-
-            @test result["termination_status"] == LOCALLY_SOLVED
-            @test isapprox(result["objective"], 10.0; atol = 1e-2)
-            for (i, bus) in result["solution"]["bus"]
-                @test bus["lam_kcl_r"] <=  1.0
-                @test bus["lam_kcl_r"] >= -1.0
-            end
-        end
-
-    end
-
 end
 
 
@@ -654,7 +611,7 @@ end
 
 @testset "test storage opf" begin
 
-    @testset "test acp polar opf" begin
+    @testset "test ac polar opf" begin
         @testset "5-bus case" begin
             result = PowerModels._run_opf_strg("../test/data/matpower/case5_strg.m", PowerModels.ACPPowerModel, ipopt_solver)
 
@@ -668,7 +625,7 @@ end
         end
     end
 
-    @testset "test mi acp polar opf" begin
+    @testset "test mi ac polar opf" begin
         @testset "5-bus case" begin
             result = PowerModels._run_opf_strg_mi("../test/data/matpower/case5_strg.m", PowerModels.ACPPowerModel, juniper_solver)
 
@@ -681,65 +638,6 @@ end
             @test isapprox(result["solution"]["storage"]["2"]["ps"], -0.233351; atol = 1e-2)
         end
     end
-
-
-    @testset "test acr polar opf" begin
-        @testset "5-bus case" begin
-            result = PowerModels._run_opf_strg("../test/data/matpower/case5_strg.m", PowerModels.ACRPowerModel, ipopt_solver)
-
-            @test result["termination_status"] == LOCALLY_SOLVED
-            @test isapprox(result["objective"], 17039.7; atol = 1e0)
-
-            @test isapprox(result["solution"]["storage"]["1"]["se"],  0.0; atol = 1e0)
-            @test isapprox(result["solution"]["storage"]["1"]["ps"], -0.176572; atol = 1e-2)
-            @test isapprox(result["solution"]["storage"]["2"]["se"],  0.0; atol = 1e0)
-            @test isapprox(result["solution"]["storage"]["2"]["ps"], -0.233351; atol = 1e-2)
-        end
-    end
-
-    @testset "test mi acr polar opf" begin
-        @testset "5-bus case" begin
-            result = PowerModels._run_opf_strg_mi("../test/data/matpower/case5_strg.m", PowerModels.ACRPowerModel, juniper_solver)
-
-            @test result["termination_status"] == LOCALLY_SOLVED
-            @test isapprox(result["objective"], 17039.7; atol = 1e0)
-
-            @test isapprox(result["solution"]["storage"]["1"]["se"],  0.0; atol = 1e0)
-            @test isapprox(result["solution"]["storage"]["1"]["ps"], -0.176572; atol = 1e-2)
-            @test isapprox(result["solution"]["storage"]["2"]["se"],  0.0; atol = 1e0)
-            @test isapprox(result["solution"]["storage"]["2"]["ps"], -0.233351; atol = 1e-2)
-        end
-    end
-
-
-    @testset "test soc polar opf" begin
-        @testset "5-bus case" begin
-            result = PowerModels._run_opf_strg("../test/data/matpower/case5_strg.m", PowerModels.SOCWRPowerModel, ipopt_solver)
-
-            @test result["termination_status"] == LOCALLY_SOLVED
-            @test isapprox(result["objective"], 13799.5; atol = 1e0)
-
-            @test isapprox(result["solution"]["storage"]["1"]["se"],  0.0; atol = 1e0)
-            @test isapprox(result["solution"]["storage"]["1"]["ps"], -0.177399; atol = 1e-2)
-            @test isapprox(result["solution"]["storage"]["2"]["se"],  0.0; atol = 1e0)
-            @test isapprox(result["solution"]["storage"]["2"]["ps"], -0.235288; atol = 1e-2)
-        end
-    end
-
-    @testset "test mi soc polar opf" begin
-        @testset "5-bus case" begin
-            result = PowerModels._run_opf_strg_mi("../test/data/matpower/case5_strg.m", PowerModels.SOCWRPowerModel, juniper_solver)
-
-            @test result["termination_status"] == LOCALLY_SOLVED
-            @test isapprox(result["objective"], 13799.5; atol = 1e0)
-
-            @test isapprox(result["solution"]["storage"]["1"]["se"],  0.0; atol = 1e0)
-            @test isapprox(result["solution"]["storage"]["1"]["ps"], -0.177399; atol = 1e-2)
-            @test isapprox(result["solution"]["storage"]["2"]["se"],  0.0; atol = 1e0)
-            @test isapprox(result["solution"]["storage"]["2"]["ps"], -0.235288; atol = 1e-2)
-        end
-    end
-
 
     @testset "test dc opf" begin
         @testset "5-bus case" begin
@@ -769,7 +667,6 @@ end
         end
     end
 
-
     @testset "test dc+ll opf" begin
         @testset "5-bus case" begin
             result = PowerModels._run_opf_strg("../test/data/matpower/case5_strg.m", PowerModels.DCPLLPowerModel, ipopt_solver)
@@ -797,38 +694,39 @@ end
 
 
 @testset "test ac v+t polar opf" begin
+    PMs = PowerModels
 
     function build_opf_var(pm::AbstractPowerModel)
-        PowerModels.variable_bus_voltage(pm)
-        PowerModels.variable_gen_power(pm)
-        PowerModels.variable_branch_power(pm)
-        PowerModels.variable_dcline_power(pm)
+        PMs.variable_voltage(pm)
+        PMs.variable_generation(pm)
+        PMs.variable_branch_flow(pm)
+        PMs.variable_dcline_flow(pm)
 
-        PowerModels.objective_min_fuel_and_flow_cost(pm)
+        PMs.objective_min_fuel_and_flow_cost(pm)
 
-        PowerModels.constraint_model_voltage(pm)
+        PMs.constraint_model_voltage(pm)
 
         for i in ids(pm,:ref_buses)
-            PowerModels.constraint_theta_ref(pm, i)
+            PMs.constraint_theta_ref(pm, i)
         end
 
         for i in ids(pm,:bus)
-            PowerModels.constraint_power_balance(pm, i)
+            PMs.constraint_power_balance(pm, i)
         end
 
         for i in ids(pm,:branch)
             # these are the functions to be tested
-            PowerModels.constraint_ohms_y_from(pm, i)
-            PowerModels.constraint_ohms_y_to(pm, i)
+            PMs.constraint_ohms_y_from(pm, i)
+            PMs.constraint_ohms_y_to(pm, i)
 
-            PowerModels.constraint_voltage_angle_difference(pm, i)
+            PMs.constraint_voltage_angle_difference(pm, i)
 
-            PowerModels.constraint_thermal_limit_from(pm, i)
-            PowerModels.constraint_thermal_limit_to(pm, i)
+            PMs.constraint_thermal_limit_from(pm, i)
+            PMs.constraint_thermal_limit_to(pm, i)
         end
 
         for i in ids(pm,:dcline)
-            PowerModels.constraint_dcline_power_losses(pm, i)
+            PMs.constraint_dcline(pm, i)
         end
     end
 

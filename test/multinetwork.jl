@@ -25,7 +25,7 @@ TESTLOG = Memento.getlogger(PowerModels)
     @testset "topology processing" begin
         @testset "7-bus replicate status case" begin
             mn_data = build_mn_data("../test/data/matpower/case7_tplgy.m")
-            PowerModels.simplify_network!(mn_data)
+            PowerModels.propagate_topology_status!(mn_data)
 
             active_buses = Set(["2", "4", "5", "7"])
             active_branches = Set(["8"])
@@ -59,7 +59,7 @@ TESTLOG = Memento.getlogger(PowerModels)
         end
         @testset "7-bus replicate filer case" begin
             mn_data = build_mn_data("../test/data/matpower/case7_tplgy.m")
-            PowerModels.simplify_network!(mn_data)
+            PowerModels.propagate_topology_status!(mn_data)
             PowerModels.select_largest_component!(mn_data)
 
             active_buses = Set(["4", "5", "7"])
@@ -94,7 +94,7 @@ TESTLOG = Memento.getlogger(PowerModels)
         end
         @testset "7+14 hybrid filer case" begin
             mn_data = build_mn_data("../test/data/matpower/case7_tplgy.m", "../test/data/matpower/case14.m")
-            PowerModels.simplify_network!(mn_data)
+            PowerModels.propagate_topology_status!(mn_data)
             PowerModels.select_largest_component!(mn_data)
 
             case7_data = mn_data["nw"]["1"]
@@ -108,15 +108,6 @@ TESTLOG = Memento.getlogger(PowerModels)
         end
     end
 
-
-    @testset "test run_opf with multinetwork data" begin
-        mn_data = build_mn_data("../test/data/matpower/case5.m")
-        @test_throws(TESTLOG, ErrorException, PowerModels.run_opf(mn_data, ACPPowerModel, ipopt_solver))
-    end
-
-    @testset "test run_mn_opf with single-network data" begin
-        @test_throws(TESTLOG, ErrorException, PowerModels.run_mn_opf("../test/data/matpower/case5.m", ACPPowerModel, ipopt_solver))
-    end
 
     @testset "test multi-network solution" begin
         # test case where generator status is 1 but the gen_bus status is 0
@@ -285,22 +276,22 @@ TESTLOG = Memento.getlogger(PowerModels)
 
 
             @test isapprox(result["solution"]["nw"]["1"]["storage"]["1"]["ps"], -0.0447822; atol = 1e-3)
-            @test isapprox(result["solution"]["nw"]["1"]["storage"]["1"]["qs"], -0.0197299; atol = 1e-3)
+            @test isapprox(result["solution"]["nw"]["1"]["storage"]["1"]["qs"],  0.0000000; atol = 1e-3)
             @test isapprox(result["solution"]["nw"]["1"]["storage"]["2"]["ps"], -0.079233; atol = 1e-3)
             @test isapprox(result["solution"]["nw"]["1"]["storage"]["2"]["qs"],  0.0000000; atol = 1e-3)
 
             @test isapprox(result["solution"]["nw"]["2"]["storage"]["1"]["ps"], -0.0447822; atol = 1e-3)
-            @test isapprox(result["solution"]["nw"]["2"]["storage"]["1"]["qs"], -0.0197299; atol = 1e-3)
+            @test isapprox(result["solution"]["nw"]["2"]["storage"]["1"]["qs"],  0.0000000; atol = 1e-3)
             @test isapprox(result["solution"]["nw"]["2"]["storage"]["2"]["ps"], -0.079233; atol = 1e-3)
             @test isapprox(result["solution"]["nw"]["2"]["storage"]["2"]["qs"],  0.0000000; atol = 1e-3)
 
             @test isapprox(result["solution"]["nw"]["3"]["storage"]["1"]["ps"], -0.0447824; atol = 1e-3)
-            @test isapprox(result["solution"]["nw"]["3"]["storage"]["1"]["qs"], -0.0197300; atol = 1e-3)
+            @test isapprox(result["solution"]["nw"]["3"]["storage"]["1"]["qs"],  0.0000000; atol = 1e-3)
             @test isapprox(result["solution"]["nw"]["3"]["storage"]["2"]["ps"],  0.0000000; atol = 1e-3)
             @test isapprox(result["solution"]["nw"]["3"]["storage"]["2"]["qs"],  0.0000000; atol = 1e-3)
 
             @test isapprox(result["solution"]["nw"]["4"]["storage"]["1"]["ps"], -0.0447822; atol = 1e-3)
-            @test isapprox(result["solution"]["nw"]["4"]["storage"]["1"]["qs"], -0.0197299; atol = 1e-3)
+            @test isapprox(result["solution"]["nw"]["4"]["storage"]["1"]["qs"],  0.0000000; atol = 1e-3)
             @test isapprox(result["solution"]["nw"]["4"]["storage"]["2"]["ps"], -0.079233; atol = 1e-3)
             @test isapprox(result["solution"]["nw"]["4"]["storage"]["2"]["qs"],  0.0000000; atol = 1e-3)
 
@@ -367,24 +358,24 @@ TESTLOG = Memento.getlogger(PowerModels)
             @test isapprox(result["objective"], 57980.0; atol = 1e0)
 
             @test isapprox(result["solution"]["nw"]["1"]["storage"]["1"]["ps"],  0.0000000; atol = 1e-3)
-            @test isapprox(result["solution"]["nw"]["1"]["storage"]["1"]["qs"],  0.0543982; atol = 1e-3)
+            @test isapprox(result["solution"]["nw"]["1"]["storage"]["1"]["qs"],  0.0000000; atol = 1e-3)
             @test isapprox(result["solution"]["nw"]["1"]["storage"]["2"]["ps"], -0.0834412; atol = 1e-3)
-            @test isapprox(result["solution"]["nw"]["1"]["storage"]["2"]["qs"],  0.0801070; atol = 1e-3)
+            @test isapprox(result["solution"]["nw"]["1"]["storage"]["2"]["qs"],  0.0000000; atol = 1e-3)
 
             @test isapprox(result["solution"]["nw"]["2"]["storage"]["1"]["ps"],  0.0000000; atol = 1e-3)
-            @test isapprox(result["solution"]["nw"]["2"]["storage"]["1"]["qs"],  0.0552175; atol = 1e-3)
+            @test isapprox(result["solution"]["nw"]["2"]["storage"]["1"]["qs"],  0.0000000; atol = 1e-3)
             @test isapprox(result["solution"]["nw"]["2"]["storage"]["2"]["ps"],  0.0000000; atol = 1e-3)
-            @test isapprox(result["solution"]["nw"]["2"]["storage"]["2"]["qs"],  0.0803519; atol = 1e-3)
+            @test isapprox(result["solution"]["nw"]["2"]["storage"]["2"]["qs"],  0.0000000; atol = 1e-3)
 
             @test isapprox(result["solution"]["nw"]["3"]["storage"]["1"]["ps"],  0.0000000; atol = 1e-3)
-            @test isapprox(result["solution"]["nw"]["3"]["storage"]["1"]["qs"],  0.0535058; atol = 1e-3)
+            @test isapprox(result["solution"]["nw"]["3"]["storage"]["1"]["qs"],  0.0000000; atol = 1e-3)
             @test isapprox(result["solution"]["nw"]["3"]["storage"]["2"]["ps"], -0.1565587; atol = 1e-3)
-            @test isapprox(result["solution"]["nw"]["3"]["storage"]["2"]["qs"],  0.0806228; atol = 1e-3)
+            @test isapprox(result["solution"]["nw"]["3"]["storage"]["2"]["qs"],  0.0000000; atol = 1e-3)
 
             @test isapprox(result["solution"]["nw"]["4"]["storage"]["1"]["ps"], -0.1800000; atol = 1e-3)
-            @test isapprox(result["solution"]["nw"]["4"]["storage"]["1"]["qs"],  0.0549343; atol = 1e-3)
+            @test isapprox(result["solution"]["nw"]["4"]["storage"]["1"]["qs"],  0.0000000; atol = 1e-3)
             @test isapprox(result["solution"]["nw"]["4"]["storage"]["2"]["ps"],  0.0000000; atol = 1e-3)
-            @test isapprox(result["solution"]["nw"]["4"]["storage"]["2"]["qs"],  0.0802049; atol = 1e-3)
+            @test isapprox(result["solution"]["nw"]["4"]["storage"]["2"]["qs"],  0.0000000; atol = 1e-3)
 
             # This formulation is lossless. Sum of loads and storage should equal sum of generation.
             for (n, net) in mn_data["nw"]

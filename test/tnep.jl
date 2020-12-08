@@ -96,19 +96,16 @@ end
         @test result["termination_status"] == LOCALLY_SOLVED
         @test isapprox(result["objective"], 1; atol = 1e-2)
     end
-end
-
-
-@testset "test matpower dc tnep" begin
+    
     @testset "5-bus case with matpower DCMP model and TNEP" begin
         result = run_tnep("../test/data/matpower/case5_tnep.m", DCMPPowerModel, juniper_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
         @test isapprox(result["solution"]["ne_branch"]["1"]["built"], 1.0; atol = 1e-5)
         @test isapprox(result["solution"]["ne_branch"]["2"]["built"], 0.0; atol = 1e-5)
+    
     end
 end
-
 
 @testset "test dc-losses tnep" begin
     #=
@@ -135,27 +132,6 @@ end
     end
 end
 
-@testset "test lpac tnep" begin
-    @testset "3-bus case" begin
-        data = PowerModels.parse_file("../test/data/matpower/case3_tnep.m")
-        calc_thermal_limits!(data)
-        result = run_tnep(data, LPACCPowerModel, juniper_solver)
-
-        check_tnep_status(result["solution"])
-
-        @test result["termination_status"] == LOCALLY_SOLVED
-        @test isapprox(result["objective"], 2; atol = 1e-2)
-    end
-
-    @testset "5-bus case" begin
-        result = run_tnep("../test/data/matpower/case5_tnep.m", LPACCPowerModel, juniper_solver)
-
-        check_tnep_status(result["solution"])
-
-        @test result["termination_status"] == LOCALLY_SOLVED
-        @test isapprox(result["objective"], 1; atol = 1e-2)
-    end
-end
 
 @testset "test tnep branch flow output" begin
     @testset "3-bus case" begin

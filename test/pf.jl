@@ -15,10 +15,8 @@
 
         @test isapprox(result["solution"]["dcline"]["1"]["pf"],  0.10; atol = 1e-5)
         @test isapprox(result["solution"]["dcline"]["1"]["pt"], -0.10; atol = 1e-5)
-
-        # removed due to cross platform consistnecy, started failing 05/22/2020 when ipopt moved to jll artifacts
-        #@test isapprox(result["solution"]["dcline"]["1"]["qf"], -0.403045; atol = 1e-5)
-        #@test isapprox(result["solution"]["dcline"]["1"]["qt"],  0.0647562; atol = 1e-5)
+        @test isapprox(result["solution"]["dcline"]["1"]["qf"], -0.403045; atol = 1e-5)
+        @test isapprox(result["solution"]["dcline"]["1"]["qt"],  0.0647562; atol = 1e-5)
     end
     @testset "5-bus transformer swap case" begin
         result = run_pf("../test/data/matpower/case5.m", ACPPowerModel, ipopt_solver)
@@ -208,50 +206,45 @@ end
         @test result["termination_status"] == LOCALLY_SOLVED
         @test isapprox(result["objective"], 0; atol = 1e-2)
     end
-end
-
-
-@testset "test matpower dc pf" begin
     @testset "5-bus case with matpower DCMP model" begin
         result = run_pf("../test/data/matpower/case5.m", DCMPPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
 
-        @test isapprox(result["solution"]["bus"]["1"]["va"], 0.0621920; atol = 1e-7)
-        @test isapprox(result["solution"]["bus"]["2"]["va"], 0.0002623; atol = 1e-7)
+        @test isapprox(result["solution"]["bus"]["1"]["va"],  0.0621920; atol = 1e-7)
+        @test isapprox(result["solution"]["bus"]["2"]["va"],  0.0002623; atol = 1e-7)
         @test isapprox(result["solution"]["bus"]["3"]["va"], 0.0088601; atol = 1e-7)
-        @test isapprox(result["solution"]["bus"]["4"]["va"], 0.0000000; atol = 1e-7)
+        @test isapprox(result["solution"]["bus"]["4"]["va"], 0.0; atol = 1e-7)
+
     end
 end
 
 
 @testset "test soc pf" begin
-    # started failing 05/22/2020 when ipopt moved to jll artifacts
-    # @testset "3-bus case" begin
-    #     result = run_pf("../test/data/matpower/case3.m", SOCWRPowerModel, ipopt_solver, solution_processors=[sol_data_model!])
+    @testset "3-bus case" begin
+        result = run_pf("../test/data/matpower/case3.m", SOCWRPowerModel, ipopt_solver, solution_processors=[sol_data_model!])
 
-    #     @test result["termination_status"] == LOCALLY_SOLVED
-    #     @test isapprox(result["objective"], 0; atol = 1e-2)
+        @test result["termination_status"] == LOCALLY_SOLVED
+        @test isapprox(result["objective"], 0; atol = 1e-2)
 
-    #     @test result["solution"]["gen"]["1"]["pg"] >= 1.480
+        @test result["solution"]["gen"]["1"]["pg"] >= 1.480
 
-    #     @test isapprox(result["solution"]["gen"]["2"]["pg"], 1.600063; atol = 1e-3)
-    #     @test isapprox(result["solution"]["gen"]["3"]["pg"], 0.0; atol = 1e-3)
+        @test isapprox(result["solution"]["gen"]["2"]["pg"], 1.600063; atol = 1e-3)
+        @test isapprox(result["solution"]["gen"]["3"]["pg"], 0.0; atol = 1e-3)
 
-    #     @test isapprox(result["solution"]["bus"]["1"]["vm"], 1.09999; atol = 1e-3)
-    #     @test isapprox(result["solution"]["bus"]["2"]["vm"], 0.92616; atol = 1e-3)
-    #     @test isapprox(result["solution"]["bus"]["3"]["vm"], 0.89999; atol = 1e-3)
+        @test isapprox(result["solution"]["bus"]["1"]["vm"], 1.09999; atol = 1e-3)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"], 0.92616; atol = 1e-3)
+        @test isapprox(result["solution"]["bus"]["3"]["vm"], 0.89999; atol = 1e-3)
 
-    #     @test isapprox(result["solution"]["dcline"]["1"]["pf"],  0.10; atol = 1e-4)
-    #     @test isapprox(result["solution"]["dcline"]["1"]["pt"], -0.10; atol = 1e-4)
-    # end
-    # started failing 05/22/2020 when ipopt moved to jll artifacts (only on travis)
-    # @testset "5-bus asymmetric case" begin
-    #     result = run_pf("../test/data/matpower/case5_asym.m", SOCWRPowerModel, ipopt_solver)
+        @test isapprox(result["solution"]["dcline"]["1"]["pf"],  0.10; atol = 1e-4)
+        @test isapprox(result["solution"]["dcline"]["1"]["pt"], -0.10; atol = 1e-4)
+    end
+    @testset "5-bus asymmetric case" begin
+        result = run_pf("../test/data/matpower/case5_asym.m", SOCWRPowerModel, ipopt_solver)
 
-    #     @test result["termination_status"] == LOCALLY_SOLVED
-    #     @test isapprox(result["objective"], 0; atol = 1e-2)
-    # end
+        @test result["termination_status"] == LOCALLY_SOLVED
+        @test isapprox(result["objective"], 0; atol = 1e-2)
+    end
     @testset "6-bus case" begin
         result = run_pf("../test/data/matpower/case6.m", SOCWRPowerModel, ipopt_solver, solution_processors=[sol_data_model!])
 
@@ -413,3 +406,110 @@ end
     end
 end
 
+
+@testset "test dc pf" begin
+    @testset "3-bus case" begin
+        result = run_dc_pf("../test/data/matpower/case3.m", ipopt_solver)
+
+        @test result["termination_status"] == LOCALLY_SOLVED
+        @test isapprox(result["objective"], 0; atol = 1e-2)
+
+        @test isapprox(result["solution"]["gen"]["1"]["pg"], 1.54994; atol = 1e-3)
+
+        @test isapprox(result["solution"]["bus"]["1"]["va"],  0.00000; atol = 1e-5)
+        @test isapprox(result["solution"]["bus"]["2"]["va"],  0.09147654582; atol = 1e-5)
+        @test isapprox(result["solution"]["bus"]["3"]["va"], -0.28291891895; atol = 1e-5)
+    end
+    @testset "5-bus asymmetric case" begin
+        result = run_dc_pf("../test/data/matpower/case5_asym.m", ipopt_solver)
+
+        @test result["termination_status"] == LOCALLY_SOLVED
+        @test isapprox(result["objective"], 0; atol = 1e-2)
+    end
+    @testset "6-bus case" begin
+        result = run_dc_pf("../test/data/matpower/case6.m", ipopt_solver)
+
+        @test result["termination_status"] == LOCALLY_SOLVED
+        @test isapprox(result["objective"], 0; atol = 1e-2)
+        @test isapprox(result["solution"]["bus"]["1"]["va"], 0.00000; atol = 1e-5)
+        @test isapprox(result["solution"]["bus"]["4"]["va"], 0.00000; atol = 1e-5)
+    end
+    @testset "24-bus rts case" begin
+        result = run_pf("../test/data/matpower/case24.m", DCPPowerModel, ipopt_solver)
+
+        @test result["termination_status"] == LOCALLY_SOLVED
+        @test isapprox(result["objective"], 0; atol = 1e-2)
+    end
+    @testset "5-bus case with matpower DCMP model" begin
+        result = run_pf("../test/data/matpower/case5.m", DCMPPowerModel, ipopt_solver)
+
+        @test result["termination_status"] == LOCALLY_SOLVED
+
+        @test isapprox(result["solution"]["bus"]["1"]["va"],  0.0621920; atol = 1e-7)
+        @test isapprox(result["solution"]["bus"]["2"]["va"],  0.0002623; atol = 1e-7)
+        @test isapprox(result["solution"]["bus"]["3"]["va"], 0.0088601; atol = 1e-7)
+        @test isapprox(result["solution"]["bus"]["4"]["va"], 0.0; atol = 1e-7)
+
+    end
+end
+
+
+@testset "test native dc pf solver" begin
+    # degenerate due to no slack bus
+    # @testset "3-bus case" begin
+    #     data = PowerModels.parse_file("../test/data/matpower/case3.m")
+    #     result = run_dc_pf(data, ipopt_solver)
+    #     native = compute_dc_pf(data)
+
+    #     for (i,bus) in data["bus"]
+    #         opt_val = result["solution"]["bus"][i]["va"]
+    #         lin_val = native["bus"][i]["va"]
+    #         @test isapprox(opt_val, lin_val)
+    #     end
+    # end
+    @testset "5-bus case" begin
+        data = PowerModels.parse_file("../test/data/matpower/case5.m")
+        result = run_dc_pf(data, ipopt_solver)
+        native = compute_dc_pf(data)
+
+        for (i,bus) in data["bus"]
+            opt_val = result["solution"]["bus"][i]["va"]
+            lin_val = native["bus"][i]["va"]
+            @test isapprox(opt_val, lin_val; atol = 1e-10)
+        end
+    end
+    @testset "5-bus asymmetric case" begin
+        data = PowerModels.parse_file("../test/data/matpower/case5_asym.m")
+        result = run_dc_pf(data, ipopt_solver)
+        native = compute_dc_pf(data)
+
+        for (i,bus) in data["bus"]
+            opt_val = result["solution"]["bus"][i]["va"]
+            lin_val = native["bus"][i]["va"]
+            @test isapprox(opt_val, lin_val; atol = 1e-10)
+        end
+    end
+    # solve_dc_pf does not yet support multiple slack buses
+    # @testset "6-bus case" begin
+    #     data = PowerModels.parse_file("../test/data/matpower/case6.m")
+    #     result = run_dc_pf(data, ipopt_solver)
+    #     native = compute_dc_pf(data)
+
+    #     for (i,bus) in data["bus"]
+    #         opt_val = result["solution"]["bus"][i]["va"]
+    #         lin_val = native["bus"][i]["va"]
+    #         @test isapprox(opt_val, lin_val)
+    #     end
+    # end
+    @testset "24-bus rts case" begin
+        data = PowerModels.parse_file("../test/data/matpower/case24.m")
+        result = run_dc_pf(data, ipopt_solver)
+        native = compute_dc_pf(data)
+
+        for (i,bus) in data["bus"]
+            opt_val = result["solution"]["bus"][i]["va"]
+            lin_val = native["bus"][i]["va"]
+            @test isapprox(opt_val, lin_val; atol = 1e-10)
+        end
+    end
+end

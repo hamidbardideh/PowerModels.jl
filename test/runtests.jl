@@ -15,7 +15,6 @@ import JuMP
 import JSON
 
 import LinearAlgebra
-import SparseArrays
 using Test
 
 # default setup for solvers
@@ -49,8 +48,6 @@ include("common.jl")
     include("opb.jl")
 
     include("pf.jl")
-
-    include("pf-native.jl")
 
     include("opf.jl")
 
